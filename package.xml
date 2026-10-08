@@ -11,10 +11,15 @@
 
   <depend>rclcpp</depend>
   <depend>message_filters</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>eigen</depend>
   <depend>geographiclib</depend>
   <depend>sad_msgs</depend>
+
+  <exec_depend>trajectory_server</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

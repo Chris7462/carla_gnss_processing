@@ -15,7 +15,10 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(message_filters REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(sad_msgs REQUIRED)
 
@@ -36,7 +39,10 @@ target_link_libraries(carla_gnss_processing_node
   PRIVATE
     rclcpp::rclcpp
     message_filters::message_filters
+    ${tf2_ros_TARGETS}
+    ${tf2_eigen_TARGETS}
     ${sensor_msgs_TARGETS}
+    ${geometry_msgs_TARGETS}
     Eigen3::Eigen
     ${sad_msgs_TARGETS}
     ${GeographicLib_LIBRARIES})

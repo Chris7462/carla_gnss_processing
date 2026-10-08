@@ -4,6 +4,10 @@
 #include <string>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
+
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "carla_gnss_processing/carla_gnss_processing.hpp"
 
@@ -20,6 +24,9 @@ CarlaGnssProcessing::CarlaGnssProcessing()
   baseline_length_ = declare_parameter<double>("baseline_length", baseline_length_);
   baseline_tolerance_ = declare_parameter<double>("baseline_tolerance", baseline_tolerance_);
 
+  map_frame_ = declare_parameter<std::string>("map_frame", map_frame_);
+  gnss_frame_ = declare_parameter<std::string>("gnss_frame", gnss_frame_);
+
   MapProjection::Options options;
   options.map_lat_0_ = declare_parameter<double>("map_lat_0", options.map_lat_0_);
   options.map_lon_0_ = declare_parameter<double>("map_lon_0", options.map_lon_0_);
@@ -34,6 +41,7 @@ CarlaGnssProcessing::CarlaGnssProcessing()
   const auto qos = rclcpp::QoS(rclcpp::KeepLast(100)).reliable();
 
   gnss_pub_ = create_publisher<sad_msgs::msg::Gnss>(gnss_topic, qos);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   main_sub_.subscribe(this, main_topic, qos);
   aux_sub_.subscribe(this, aux_topic, qos);
@@ -83,4 +91,22 @@ void CarlaGnssProcessing::gnss_callback(
   }
 
   gnss_pub_->publish(msg);
+
+  // tf map -> gnss_link: main antenna in CARLA map coordinates, x east, y north, z altitude.
+  // The rotation is the yaw of the baseline (counter-clockwise from east); identity while the
+  // heading is invalid.
+  const Eigen::Vector3d trans(main_pos.x(), main_pos.y(), main_msg->altitude);
+  Eigen::Quaterniond quat = Eigen::Quaterniond::Identity();
+  if (msg.heading_valid) {
+    const double yaw = std::atan2(baseline.y(), baseline.x());
+    quat = Eigen::Quaterniond(Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()));
+  }
+
+  geometry_msgs::msg::TransformStamped tf_msg;
+  tf_msg.header.stamp = main_msg->header.stamp;  // data time, not now()
+  tf_msg.header.frame_id = map_frame_;
+  tf_msg.child_frame_id = gnss_frame_;
+  tf_msg.transform.translation = tf2::toMsg2(trans);
+  tf_msg.transform.rotation = tf2::toMsg(quat);
+  tf_broadcaster_->sendTransform(tf_msg);
 }
