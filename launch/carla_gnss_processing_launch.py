@@ -1,3 +1,6 @@
+from os.path import join
+from ament_index_python.packages import get_package_share_directory
+
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -39,7 +42,33 @@ def generate_launch_description():
         }]
     )
 
+    # Ground truth for comparison: the vehicle origin from CARLA's own tf (map -> odom -> hero),
+    # the same pose /carla/hero/odometry reports
+    odom_trajectory_node = Node(
+        package='trajectory_server',
+        executable='trajectory_server_node',
+        name='trajectory_server_node',
+        namespace='odom_trajectory',
+        parameters=[{
+            'use_sim_time': True,
+            'target_frame_name': 'map',
+            'source_frame_name': 'hero',
+            'trajectory_update_rate': 10.0,
+            'trajectory_publish_rate': 10.0
+        }]
+    )
+
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', join(get_package_share_directory('carla_gnss_processing'), 'rviz', 'carla_gnss_processing.rviz')],
+        parameters=[{'use_sim_time': True}]
+    )
+
     return LaunchDescription([
         carla_gnss_processing_node,
-        trajectory_node
+        trajectory_node,
+        odom_trajectory_node,
+        rviz_node
     ])
